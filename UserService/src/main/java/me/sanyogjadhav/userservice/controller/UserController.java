@@ -3,10 +3,13 @@ package me.sanyogjadhav.userservice.controller;
 import jakarta.validation.Valid;
 import me.sanyogjadhav.userservice.dto.UserReqDTO;
 import me.sanyogjadhav.userservice.Service.UserService;
+import me.sanyogjadhav.userservice.dto.UserResDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -28,5 +31,18 @@ public class UserController {
         }
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseMessage);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<UserResDTO>> getUsers(){
+
+       List<UserResDTO> users= userService.getUsers();
+
+       if(users==null){
+           return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+       }
+
+       return ResponseEntity.status(HttpStatus.OK).body(users);
+
     }
 }

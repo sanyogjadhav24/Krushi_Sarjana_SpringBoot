@@ -2,12 +2,21 @@ package me.sanyogjadhav.userservice.dto;
 
 
 public class UserResDTO {
+    private Long id;
     private String name;
     private String email;
     private String phoneNo;
     private String role;
     private String profilImg;
-    private Boolean isDeleted;
+   // private Boolean isDeleted;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;
@@ -49,11 +58,5 @@ public class UserResDTO {
         this.profilImg = profilImg;
     }
 
-    public Boolean getDeleted() {
-        return isDeleted;
-    }
 
-    public void setDeleted(Boolean deleted) {
-        isDeleted = deleted;
-    }
 }
