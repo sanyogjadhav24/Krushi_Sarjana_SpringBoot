@@ -1,9 +1,12 @@
 package me.sanyogjadhav.userservice.dto;
 
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import me.sanyogjadhav.userservice.model.Role;
 
 public class UserReqDTO {
 
@@ -23,8 +26,8 @@ public class UserReqDTO {
     @Size(min = 6, message = "Password must be at least 6 characters long")
     private String password;
 
-    @NotBlank(message = "Role cannot be empty")
-    private String role;
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
     private String profilImg;
 
@@ -62,16 +65,17 @@ public class UserReqDTO {
         this.password = password;
     }
 
-    public String getRole() {
-        return role;
-    }
 
-    public void setRole(String role) {
-        this.role = role;
-    }
 
     public String getProfilImg() {
         return profilImg;
+    }
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public void setProfilImg(String profilImg) {

@@ -23,8 +23,9 @@ public class User {
     @Size(min = 3, max = 50, message = "Name must be between 3 and 50 characters")
     private String name;
 
-    @NotBlank(message = "Role cannot be empty")
-    private String role;
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
 
     @NotBlank(message = "Password cannot be empty")
     @Size(min = 6, message = "Password must be at least 6 characters long")
@@ -52,6 +53,22 @@ public class User {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
@@ -85,13 +102,7 @@ public class User {
         this.name = name;
     }
 
-    public String getRole() {
-        return role;
-    }
 
-    public void setRole(String role) {
-        this.role = role;
-    }
 
     public String getPassword() {
         return password;

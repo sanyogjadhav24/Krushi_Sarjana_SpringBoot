@@ -1,73 +1,78 @@
 package me.sanyogjadhav.userservice.Service;
-
-import jakarta.validation.Valid;
 import me.sanyogjadhav.userservice.dto.UserReqDTO;
-
+import me.sanyogjadhav.userservice.dto.UserResDTO;
 import me.sanyogjadhav.userservice.model.User;
 import me.sanyogjadhav.userservice.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class UserService {
-    UserRepository userrepo;
 
-    @Autowired
-    UserService(UserRepository userrepo){
-        this.userrepo=userrepo;
+    private final UserRepository userrepo;
+
+    public UserService(UserRepository userrepo) {
+        this.userrepo = userrepo;
     }
 
-    public String createUser(UserReqDTO reqDTO) {
 
-        if (reqDTO == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User data cannot be empty");
+    public List<UserResDTO> getUsers() {
+        return userrepo.findByIsDeletedFalse()
+                .stream()
+                .map(this::toResponseDto)
+                .toList();
+    }
+
+    // Get one by id (non-deleted only)
+    public UserResDTO getUserById(Long id) {
+        return toResponseDto(findActiveUser(id));
+    }
+
+    // Update user
+    @Transactional
+    public UserResDTO updateUser(Long id, UserReqDTO dto) {
+        User user = findActiveUser(id);
+        user.setName(dto.getName());
+        user.setEmail(dto.getEmail());
+        return toResponseDto(userrepo.save(user));
+    }
+
+    // Soft delete: marks the row as deleted
+    @Transactional
+    public void softDeleteUser(Long id) {
+        User user = findActiveUser(id);
+        user.setDeleted(true);
+        userrepo.save(user);
+    }
+
+    // Hard delete: removes the row from the database
+    @Transactional
+    public void deleteUser(Long id) {
+        if (!userrepo.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with id: " + id);
         }
+        userrepo.deleteById(id);
+    }
 
-        boolean emailExists = userrepo.existsByEmail(reqDTO.getEmail());
-        boolean phoneExists = userrepo.existsByPhoneNo(reqDTO.getPhoneNo());
+    private User findActiveUser(Long id) {
+        return userrepo.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found with id: " + id));
+    }
 
-        if (emailExists && phoneExists) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Both Email and Phone Number are already registered."
-            );
-        }
-        if (emailExists) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Email already registered. Please use another email."
-            );
-        }
-        if (phoneExists) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Phone number already registered. Please use another phone number."
-            );
-        }
+    private UserResDTO toResponseDto(User user) {
+        UserResDTO dto = new UserResDTO();
+        dto.setId(user.getId());
+        dto.setName(user.getName());
+        dto.setEmail(user.getEmail());
+        dto.setPhoneNo(user.getPhoneNo());
+        dto.setProfilImg(user.getProfilImg());
+        dto.setRole(user.getRole());
 
-    try {
-    User user = new User();
-    user.setName(reqDTO.getName());
-    user.setEmail(reqDTO.getEmail());
-    user.setPhoneNo(reqDTO.getPhoneNo());
-    user.setPassword(reqDTO.getPassword());
-    user.setRole(reqDTO.getRole());
-    user.setProfilImg(reqDTO.getProfilImg());
-    user.setCreatedAt(LocalDateTime.now());
-    user.setUpdatedAt(LocalDateTime.now());;
-    user.setDeleted(false);
-    userrepo.save(user);
-    return "User Created Successfully";
-    } catch (Exception e){
-
-    return "Unable to Create User: " + e.getMessage();
-
-}
-
+        return dto;
     }
 }

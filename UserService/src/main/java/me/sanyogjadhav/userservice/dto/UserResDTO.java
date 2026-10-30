@@ -1,13 +1,30 @@
 package me.sanyogjadhav.userservice.dto;
 
 
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import me.sanyogjadhav.userservice.model.Role;
+
 public class UserResDTO {
+    private Long id;
     private String name;
     private String email;
     private String phoneNo;
-    private String role;
+
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
     private String profilImg;
-    private Boolean isDeleted;
+   // private Boolean isDeleted;
+
+    public Long getId() {
+        return id;
+    }
+
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;
@@ -33,14 +50,6 @@ public class UserResDTO {
         this.phoneNo = phoneNo;
     }
 
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
-
     public String getProfilImg() {
         return profilImg;
     }
@@ -49,11 +58,12 @@ public class UserResDTO {
         this.profilImg = profilImg;
     }
 
-    public Boolean getDeleted() {
-        return isDeleted;
+
+    public Role getRole() {
+        return role;
     }
 
-    public void setDeleted(Boolean deleted) {
-        isDeleted = deleted;
+    public void setRole(Role role) {
+        this.role = role;
     }
 }
