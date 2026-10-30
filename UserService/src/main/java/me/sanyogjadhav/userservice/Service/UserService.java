@@ -76,7 +76,7 @@ public class UserService {
 
 
     public List<UserResDTO> getUsers() {
-        return userrepo.findAll()
+        return userrepo.findByIsDeletedFalse()
                 .stream()
                 .map(this::toResponseDto)
                 .toList();
@@ -85,7 +85,7 @@ public class UserService {
     public UserResDTO getUser(Long id){
         User user = userrepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-        return  toResponseDto(user);
+        return toResponseDto(user);
     }
 
 
@@ -113,4 +113,24 @@ public class UserService {
 
         return toResponseDto(userrepo.save(user));
     }
+
+    public String deleteUserPermanently(Long id) {
+        User user = userrepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+        userrepo.delete(user);
+        return "User permanently deleted successfully";
+    }
+
+    public String deleteUser(Long id){
+
+        User user =userrepo.findById(id)
+                .orElseThrow(()-> new RuntimeException("User not foung with id: "+id));
+
+        user.setDeleted(true);
+
+        userrepo.save(user);
+        return "User Deleted Successfully";
+        }
+
 }

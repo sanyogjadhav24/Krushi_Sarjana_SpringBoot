@@ -38,6 +38,9 @@ public class UserController {
 
        List<UserResDTO> users= userService.getUsers();
 
+
+
+
        if(users==null){
            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
        }
@@ -61,5 +64,21 @@ public class UserController {
         UserResDTO updatedUser= userService.updateUser(id,reqDto);
 
         return ResponseEntity.status(HttpStatus.OK).body("User Updated Successfully");
+    }
+
+    @DeleteMapping("delete/{id}")
+    public ResponseEntity<String> deleteUserPermanently(@PathVariable Long id){
+        String deletedUser = userService.deleteUserPermanently(id);
+
+        return ResponseEntity.status(HttpStatus.OK).body(deletedUser);
+    }
+
+    @DeleteMapping("{id}")
+    public ResponseEntity<String> deleteUser(@PathVariable Long id){
+
+        String deletedUser= userService.deleteUser(id);
+
+        return ResponseEntity.status(HttpStatus.OK).body(deletedUser);
+
     }
 }
