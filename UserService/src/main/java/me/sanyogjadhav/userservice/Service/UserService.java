@@ -101,5 +101,16 @@ public class UserService {
     }
 
 
+    public UserResDTO updateUser(Long id, UserReqDTO reqDto) {
+        User user = userrepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
 
+        user.setName(reqDto.getName());
+        user.setEmail(reqDto.getEmail());
+        user.setPhoneNo(reqDto.getPhoneNo());
+        user.setRole(reqDto.getRole());
+        user.setProfilImg(reqDto.getProfilImg());
+
+        return toResponseDto(userrepo.save(user));
+    }
 }

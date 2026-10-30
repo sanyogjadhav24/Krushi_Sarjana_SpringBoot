@@ -55,4 +55,11 @@ public class UserController {
         }
         return ResponseEntity.status(HttpStatus.FOUND).body(user);
     }
+
+    @PutMapping("{id}")
+    public ResponseEntity<String> updateUser(@PathVariable Long id, @RequestBody UserReqDTO reqDto){
+        UserResDTO updatedUser= userService.updateUser(id,reqDto);
+
+        return ResponseEntity.status(HttpStatus.OK).body("User Updated Successfully");
+    }
 }
