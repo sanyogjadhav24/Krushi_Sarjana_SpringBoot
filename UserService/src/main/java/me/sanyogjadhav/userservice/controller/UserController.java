@@ -42,7 +42,17 @@ public class UserController {
            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
        }
 
-       return ResponseEntity.status(HttpStatus.OK).body(users);
+       return ResponseEntity.status(HttpStatus.FOUND).body(users);
 
+    }
+
+    @GetMapping("{id}")
+    public ResponseEntity<UserResDTO> getUser(@PathVariable Long id){
+        UserResDTO user= userService.getUser(id);
+
+        if(user==null){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+        return ResponseEntity.status(HttpStatus.FOUND).body(user);
     }
 }

@@ -82,6 +82,13 @@ public class UserService {
                 .toList();
     }
 
+    public UserResDTO getUser(Long id){
+        User user = userrepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        return  toResponseDto(user);
+    }
+
+
     private UserResDTO toResponseDto(User user) {
         UserResDTO dto = new UserResDTO();
         dto.setId(user.getUser_id());
@@ -92,4 +99,7 @@ public class UserService {
        dto.setProfilImg(user.getProfilImg());
         return dto;
     }
+
+
+
 }
