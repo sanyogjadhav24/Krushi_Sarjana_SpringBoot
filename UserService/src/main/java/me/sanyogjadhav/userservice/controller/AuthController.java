@@ -36,39 +36,3 @@ public class AuthController {
     }
 }
 
-
-//
-//
-//    @GetMapping("{id}")
-//    public ResponseEntity<UserResDTO> getUser(@PathVariable Long id){
-//        UserResDTO user= userService.getUser(id);
-//
-//        if(user==null){
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-//        }
-//        return ResponseEntity.status(HttpStatus.FOUND).body(user);
-//    }
-//
-//    @PutMapping("{id}")
-//    public ResponseEntity<String> updateUser(@PathVariable Long id, @RequestBody UserReqDTO reqDto){
-//        UserResDTO updatedUser= userService.updateUser(id,reqDto);
-//
-//        return ResponseEntity.status(HttpStatus.OK).body("User Updated Successfully");
-//    }
-//
-//@DeleteMapping("delete/{id}")
-//public ResponseEntity<String> deleteUserPermanently(@PathVariable Long id){
-//    String deletedUser = userService.deleteUserPermanently(id);
-//
-//    return ResponseEntity.status(HttpStatus.OK).body(deletedUser);
-//}
-//
-//@DeleteMapping("{id}")
-//public ResponseEntity<String> deleteUser(@PathVariable Long id){
-//
-//    String deletedUser= userService.deleteUser(id);
-//
-//    return ResponseEntity.status(HttpStatus.OK).body(deletedUser);
-//
-//}
-

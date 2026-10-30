@@ -1,7 +1,7 @@
 package me.sanyogjadhav.userservice.model;
 
 public enum Role {
-    USER,
+    FARMER,
     SELLER,
-    ADMIN
+    CUSTOMER
 }

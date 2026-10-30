@@ -16,6 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Service
 public class AuthService {
     private final UserRepository userrepo;
@@ -48,10 +51,8 @@ public class AuthService {
                     "Phone number already registered. Please use another phone number.");
         }
 
-        Role role = reqDTO.getRole() == null ? Role.USER : reqDTO.getRole();
-        if (role == Role.ADMIN) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role");
-        }
+        Role role = reqDTO.getRole() == null ? Role.CUSTOMER : reqDTO.getRole();
+
 
         User user = new User();
         user.setName(reqDTO.getName());
@@ -60,6 +61,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(reqDTO.getPassword()));
         user.setRole(role);
         user.setProfilImg(reqDTO.getProfilImg());
+        user.setCreatedAt(LocalDateTime.now());
         user.setDeleted(false);
 
         try {
@@ -73,7 +75,7 @@ public class AuthService {
     public AuthResDTO login(LoginReqDTO req) {
         String email = req.getEmail().trim().toLowerCase();
 
-        User user = userrepo.findByEmailAndDeletedFalse(email)
+        User user = userrepo.findByEmailAndIsDeletedFalse(email)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED, "Invalid email or password"));
 
@@ -89,21 +91,6 @@ public class AuthService {
     }
 
 
-
-//    public List<UserResDTO> getUsers() {
-//        return userrepo.findByIsDeletedFalse()
-//                .stream()
-//                .map(this::toResponseDto)
-//                .toList();
-//    }
-
-    public UserResDTO getUser(Long id){
-        User user = userrepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-        return toResponseDto(user);
-    }
-
-
     private UserResDTO toResponseDto(User user) {
         UserResDTO dto = new UserResDTO();
         dto.setId(user.getUser_id());
@@ -115,37 +102,5 @@ public class AuthService {
         return dto;
     }
 
-
-    public UserResDTO updateUser(Long id, UserReqDTO reqDto) {
-        User user = userrepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-
-        user.setName(reqDto.getName());
-        user.setEmail(reqDto.getEmail());
-        user.setPhoneNo(reqDto.getPhoneNo());
-        user.setRole(reqDto.getRole());
-        user.setProfilImg(reqDto.getProfilImg());
-
-        return toResponseDto(userrepo.save(user));
-    }
-
-    public String deleteUserPermanently(Long id) {
-        User user = userrepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
-
-        userrepo.delete(user);
-        return "User permanently deleted successfully";
-    }
-
-    public String deleteUser(Long id){
-
-        User user =userrepo.findById(id)
-                .orElseThrow(()-> new RuntimeException("User not foung with id: "+id));
-
-        user.setDeleted(true);
-
-        userrepo.save(user);
-        return "User Deleted Successfully";
-        }
 
 }
