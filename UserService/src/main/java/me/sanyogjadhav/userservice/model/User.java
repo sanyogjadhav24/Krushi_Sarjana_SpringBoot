@@ -16,7 +16,8 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long user_id;
+    @Column(name = "user_id")
+    private Long id;
 
     @NotBlank(message = "Name cannot be empty")
     @Size(min = 3, max = 50, message = "Name must be between 3 and 50 characters")
@@ -31,11 +32,14 @@ public class User {
 
     @NotBlank(message = "Email cannot be empty")
     @Email(message = "Please provide a structurally valid email address")
+
+    @Column(nullable = false, unique = true)
     private String email;
 
     private String profilImg;
 
     @NotBlank(message = "Phone number cannot be empty")
+    @Column(nullable = false, unique = true)
     @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Phone number must be valid digits between 10 and 15 characters long")
     private String phoneNo;
 
@@ -66,11 +70,11 @@ public class User {
     }
 
     public Long getUser_id() {
-        return user_id;
+        return id;
     }
 
-    public void setUser_id(Long user_id) {
-        this.user_id = user_id;
+    public void setUser_id(Long id) {
+        this.id = id;
     }
 
     public String getName() {
