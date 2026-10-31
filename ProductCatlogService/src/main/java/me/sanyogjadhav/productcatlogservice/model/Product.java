@@ -43,11 +43,11 @@ public class Product {
     private String description;
 
     @Min(value = 0, message = "Quantity cannot be negative")
+    @Column(nullable = false)
     private int quantity;
 
     @NotNull(message = "Price is required")
-    @Positive(message = "Price must be greater than 0")
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
     // User ID from User Service
@@ -55,9 +55,9 @@ public class Product {
     private Long createdBy;
 
     // FARMER or SELLER
-    @NotBlank(message = "Creator role is required")
+    @Enumerated(EnumType.STRING)
     @Column(name = "created_by_role", nullable = false, length = 20)
-    private String createdByRole;
+    private UserRole createdByRole;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -133,11 +133,11 @@ public class Product {
         this.createdBy = createdBy;
     }
 
-    public String getCreatedByRole() {
+    public UserRole getCreatedByRole() {
         return createdByRole;
     }
 
-    public void setCreatedByRole(String createdByRole) {
+    public void setCreatedByRole(UserRole createdByRole) {
         this.createdByRole = createdByRole;
     }
 

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long Id;
+    private Long id;
 
     @NotBlank(message = "Category Name cannot be empty")
     @Column(name="category_name")
@@ -30,11 +30,11 @@ public class Category {
 
 
     public Long getId() {
-        return Id;
+        return id;
     }
 
     public void setId(Long id) {
-        Id = id;
+        this.id = id;
     }
 
     public String getName() {
