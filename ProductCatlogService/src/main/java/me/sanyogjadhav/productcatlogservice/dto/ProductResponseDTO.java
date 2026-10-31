@@ -2,6 +2,7 @@
 package me.sanyogjadhav.productcatlogservice.dto;
 
 import lombok.Data;
+import me.sanyogjadhav.productcatlogservice.model.UserRole;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,7 +28,7 @@ public class ProductResponseDTO {
 
     private Long createdBy;
 
-    private String createdByRole;
+    private UserRole createdByRole;
 
     private LocalDateTime createdAt;
 

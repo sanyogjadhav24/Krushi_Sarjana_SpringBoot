@@ -28,7 +28,12 @@ public interface ProductRepository extends JpaRepository<Product,Long> {
 
     //find product belongs toperticuilar category
 
-    List<Product> findByCategoryId(Long categoryId);
+    List<Product> findByCategory_Id(Long categoryId);
+
+    List<Product> findByCategory_IdAndCreatedByRole(
+            Long categoryId,
+            UserRole createdByRole
+    );
 
 
 }
