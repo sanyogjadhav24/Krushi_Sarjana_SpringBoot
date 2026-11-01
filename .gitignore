@@ -9,4 +9,7 @@
 **/target/
 
 # Compiled Java
-*.class
+**/target/
+**/.idea/
+**/.env
+**/.env.*
