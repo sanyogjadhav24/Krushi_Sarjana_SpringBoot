@@ -57,4 +57,70 @@ public class ProductController {
 
         return ResponseEntity.ok(products);
     }
+
+    //Get Product By ID
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductResponseDTO> getProductById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser) {
+
+        return ResponseEntity.ok(
+                productService.getProductById(id,authenticatedUser.role())
+        );
+
+    }
+
+    // Update Product (Only Owner)
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductResponseDTO> updateProduct(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @Valid @RequestBody ProductRequestDTO requestDTO){
+
+        ProductResponseDTO responseDTO= productService.updateProduct(
+                id,
+                requestDTO,
+                authenticatedUser.userId(),
+                authenticatedUser.role()
+        );
+
+        return ResponseEntity.ok(responseDTO);
+    }
+
+
+    // Delete Product (Owner)
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProduct(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+    ){
+        productService.deleteProduct(id,
+                authenticatedUser.userId(),
+                authenticatedUser.role());
+        return ResponseEntity.noContent().build();
+    }
+
+
+    //Get by Category
+
+    @GetMapping("/category/{id}")
+    public ResponseEntity<List<ProductResponseDTO>> getProductByCategory(
+            @PathVariable Long categoryId,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+    ){
+
+        return ResponseEntity.ok(
+                productService.getProductsByCategory(
+                        categoryId,
+                        authenticatedUser.role()
+                )
+        );
+
+    }
+
+
+
 }

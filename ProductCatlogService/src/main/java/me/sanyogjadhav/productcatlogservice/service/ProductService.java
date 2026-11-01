@@ -2,7 +2,7 @@ package me.sanyogjadhav.productcatlogservice.service;
 
 
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import me.sanyogjadhav.productcatlogservice.dto.ProductRequestDTO;
 import me.sanyogjadhav.productcatlogservice.dto.ProductResponseDTO;
@@ -11,12 +11,10 @@ import me.sanyogjadhav.productcatlogservice.model.Product;
 import me.sanyogjadhav.productcatlogservice.model.UserRole;
 import me.sanyogjadhav.productcatlogservice.repository.CategoryRepository;
 import me.sanyogjadhav.productcatlogservice.repository.ProductRepository;
-import org.apache.catalina.User;
-import org.springframework.boot.webmvc.autoconfigure.WebMvcProperties;
+
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -48,7 +46,7 @@ public class ProductService {
 
         product.setCreatedBy(userId);
         product.setCreatedByRole(userRole);
-        product.setCreatedAt(LocalDateTime.now());
+
 
         return mapToResponse(productRepository.save(product));
     }
@@ -57,7 +55,7 @@ public class ProductService {
 
     //Get All products based on Logged In User
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ProductResponseDTO> getAllProducts(UserRole userRole){
         UserRole visibleRole= getVisibleProductRole(userRole);
 
@@ -70,12 +68,20 @@ public class ProductService {
 
     //Get product By Id
 
-    @Transactional
-    public ProductResponseDTO getProductById(Long productId) {
+    @Transactional(readOnly = true)
+    public ProductResponseDTO getProductById(Long productId, UserRole userRole) {
+
+        UserRole visibleRole= getVisibleProductRole(userRole);
+
+
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Product not found"));
+
+        if(product.getCreatedByRole()!=visibleRole){
+            throw new EntityNotFoundException("Product Not Found");
+        }
 
         return mapToResponse(product);
     }
@@ -85,13 +91,14 @@ public class ProductService {
     public ProductResponseDTO updateProduct(
             Long productId,
             ProductRequestDTO request,
-            Long userId) {
+            Long userId,
+            UserRole userRole) {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Product not found"));
 
-        checkOwnership(product, userId);
+        checkOwnership(product, userId,userRole);
 
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() ->
@@ -109,18 +116,18 @@ public class ProductService {
 
 
     @Transactional
-    public void deleteProduct(Long productId, Long userId) {
+    public void deleteProduct(Long productId, Long userId,UserRole userRole) {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Product not found"));
 
-        checkOwnership(product, userId);
+        checkOwnership(product, userId,userRole);
 
         productRepository.delete(product);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ProductResponseDTO> getProductsByCategory(
             Long categoryId,
             UserRole userRole) {
@@ -141,9 +148,9 @@ public class ProductService {
 
     //check ownerShip
 
-    private void checkOwnership(Product product, Long userId) {
+    private void checkOwnership(Product product, Long userId, UserRole userRole) {
 
-        if (!product.getCreatedBy().equals(userId)) {
+        if (!product.getCreatedBy().equals(userId) || product.getCreatedByRole()!=userRole) {
             throw new AccessDeniedException(
                     "You are not authorized to modify this product");
         }
