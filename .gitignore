@@ -1,0 +1,12 @@
+# Environment files
+**/.env
+**/.env.*
+
+# IntelliJ
+**/.idea/
+
+# Maven build
+**/target/
+
+# Compiled Java
+*.class
