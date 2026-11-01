@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -28,6 +30,13 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResDTO register(@Valid @RequestBody UserReqDTO reqDTO) {
         return authService.register(reqDTO);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        return ResponseEntity.ok(
+                Map.of("message", "Logged out successfully")
+        );
     }
 
     @PostMapping("/login")
