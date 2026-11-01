@@ -4,6 +4,8 @@ import me.sanyogjadhav.userservice.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional; // Use standard java.util.Optional
 
+import java.util.List;
+
 public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
     boolean existsByPhoneNo(String phoneNo);
