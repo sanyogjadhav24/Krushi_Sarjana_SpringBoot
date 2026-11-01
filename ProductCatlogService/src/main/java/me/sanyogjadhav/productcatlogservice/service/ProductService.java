@@ -13,6 +13,7 @@ import me.sanyogjadhav.productcatlogservice.repository.CategoryRepository;
 import me.sanyogjadhav.productcatlogservice.repository.ProductRepository;
 import org.apache.catalina.User;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcProperties;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -66,6 +67,88 @@ public class ProductService {
                 .toList();
 
     }
+
+    //Get product By Id
+
+    @Transactional
+    public ProductResponseDTO getProductById(Long productId) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Product not found"));
+
+        return mapToResponse(product);
+    }
+
+
+    @Transactional
+    public ProductResponseDTO updateProduct(
+            Long productId,
+            ProductRequestDTO request,
+            Long userId) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Product not found"));
+
+        checkOwnership(product, userId);
+
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Category not found"));
+
+        product.setName(request.getName());
+        product.setCategory(category);
+        product.setProductImg(request.getProductImg());
+        product.setDescription(request.getDescription());
+        product.setQuantity(request.getQuantity());
+        product.setPrice(request.getPrice());
+
+        return mapToResponse(productRepository.save(product));
+    }
+
+
+    @Transactional
+    public void deleteProduct(Long productId, Long userId) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Product not found"));
+
+        checkOwnership(product, userId);
+
+        productRepository.delete(product);
+    }
+
+    @Transactional
+    public List<ProductResponseDTO> getProductsByCategory(
+            Long categoryId,
+            UserRole userRole) {
+
+        if (!categoryRepository.existsById(categoryId)) {
+            throw new EntityNotFoundException("Category not found");
+        }
+
+        UserRole visibleRole = getVisibleProductRole(userRole);
+
+        return productRepository
+                .findByCategory_IdAndCreatedByRole(categoryId, visibleRole)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+
+    //check ownerShip
+
+    private void checkOwnership(Product product, Long userId) {
+
+        if (!product.getCreatedBy().equals(userId)) {
+            throw new AccessDeniedException(
+                    "You are not authorized to modify this product");
+        }
+    }
+
 
     //Role based Visibility
 
