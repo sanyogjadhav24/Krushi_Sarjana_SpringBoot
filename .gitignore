@@ -1,4 +1,5 @@
 # Environment files
+
 .env
 .env.*
 **/.env
@@ -29,3 +30,19 @@
 # Logs
 *.log
 logs/
+
+**/.env
+**/.env.*
+
+# IntelliJ
+**/.idea/
+
+# Maven build
+**/target/
+
+# Compiled Java
+**/target/
+**/.idea/
+**/.env
+**/.env.*
+

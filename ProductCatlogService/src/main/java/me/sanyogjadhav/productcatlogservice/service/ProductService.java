@@ -2,7 +2,7 @@ package me.sanyogjadhav.productcatlogservice.service;
 
 
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import me.sanyogjadhav.productcatlogservice.dto.ProductRequestDTO;
 import me.sanyogjadhav.productcatlogservice.dto.ProductResponseDTO;
@@ -11,11 +11,10 @@ import me.sanyogjadhav.productcatlogservice.model.Product;
 import me.sanyogjadhav.productcatlogservice.model.UserRole;
 import me.sanyogjadhav.productcatlogservice.repository.CategoryRepository;
 import me.sanyogjadhav.productcatlogservice.repository.ProductRepository;
-import org.apache.catalina.User;
-import org.springframework.boot.webmvc.autoconfigure.WebMvcProperties;
+
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -47,7 +46,7 @@ public class ProductService {
 
         product.setCreatedBy(userId);
         product.setCreatedByRole(userRole);
-        product.setCreatedAt(LocalDateTime.now());
+
 
         return mapToResponse(productRepository.save(product));
     }
@@ -56,7 +55,7 @@ public class ProductService {
 
     //Get All products based on Logged In User
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ProductResponseDTO> getAllProducts(UserRole userRole){
         UserRole visibleRole= getVisibleProductRole(userRole);
 
@@ -66,6 +65,142 @@ public class ProductService {
                 .toList();
 
     }
+
+    //Get product By Id
+
+    @Transactional(readOnly = true)
+    public ProductResponseDTO getProductById(Long productId, UserRole userRole) {
+
+        UserRole visibleRole= getVisibleProductRole(userRole);
+
+
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Product not found"));
+
+        if(product.getCreatedByRole()!=visibleRole){
+            throw new EntityNotFoundException("Product Not Found");
+        }
+
+        return mapToResponse(product);
+    }
+
+
+    @Transactional
+    public ProductResponseDTO updateProduct(
+            Long productId,
+            ProductRequestDTO request,
+            Long userId,
+            UserRole userRole) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Product not found"));
+
+        checkOwnership(product, userId,userRole);
+
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Category not found"));
+
+        product.setName(request.getName());
+        product.setCategory(category);
+        product.setProductImg(request.getProductImg());
+        product.setDescription(request.getDescription());
+        product.setQuantity(request.getQuantity());
+        product.setPrice(request.getPrice());
+
+        return mapToResponse(productRepository.save(product));
+    }
+
+
+    @Transactional
+    public void deleteProduct(Long productId, Long userId,UserRole userRole) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Product not found"));
+
+        checkOwnership(product, userId,userRole);
+
+        productRepository.delete(product);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> getProductsByCategory(
+            Long categoryId,
+            UserRole userRole) {
+
+        if (!categoryRepository.existsById(categoryId)) {
+            throw new EntityNotFoundException("Category not found");
+        }
+
+        UserRole visibleRole = getVisibleProductRole(userRole);
+
+        return productRepository
+                .findByCategory_IdAndCreatedByRole(categoryId, visibleRole)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+
+    @Transactional
+    public void reserveStock(Long productId, Integer quantity) {
+
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException(
+                    "Quantity must be greater than zero"
+            );
+        }
+
+        int updatedRows = productRepository.reserveStock(
+                productId,
+                quantity
+        );
+
+        if (updatedRows == 0) {
+
+            if (!productRepository.existsById(productId)) {
+                throw new EntityNotFoundException("Product not found");
+            }
+
+            throw new IllegalArgumentException(
+                    "Insufficient stock available"
+            );
+        }
+    }
+
+    @Transactional
+    public void releaseStock(Long productId, Integer quantity) {
+
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException(
+                    "Quantity must be greater than zero"
+            );
+        }
+
+        int updatedRows = productRepository.releaseStock(
+                productId,
+                quantity
+        );
+
+        if (updatedRows == 0) {
+            throw new EntityNotFoundException("Product not found");
+        }
+    }
+
+    //check ownerShip
+
+    private void checkOwnership(Product product, Long userId, UserRole userRole) {
+
+        if (!product.getCreatedBy().equals(userId) || product.getCreatedByRole()!=userRole) {
+            throw new AccessDeniedException(
+                    "You are not authorized to modify this product");
+        }
+    }
+
 
     //Role based Visibility
 
