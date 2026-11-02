@@ -55,77 +55,105 @@ public class OrderService {
 
         List<OrderItem> orderItems = new ArrayList<>();
 
-        for (OrderItemRequestDTO itemRequest : request.getItems()) {
+        // Track successful reservations for compensation
+        List<OrderItemRequestDTO> reservedItems = new ArrayList<>();
 
-            ProductResponseDTO product =
-                    productServiceClient.getProduct(
-                            itemRequest.getProductId(),
-                            token
+        try {
+
+            for (OrderItemRequestDTO itemRequest : request.getItems()) {
+
+                ProductResponseDTO product =
+                        productServiceClient.getProduct(
+                                itemRequest.getProductId(),
+                                token
+                        );
+
+                if (product == null) {
+                    throw new EntityNotFoundException(
+                            "Product not found: " + itemRequest.getProductId()
+                    );
+                }
+
+                if (product.getCreatedBy() == null ||
+                        !"FARMER".equals(product.getCreatedByRole())) {
+
+                    throw new IllegalArgumentException(
+                            "Only farmer products are supported currently"
+                    );
+                }
+
+                if (sellerId == null) {
+                    sellerId = product.getCreatedBy();
+                } else if (!sellerId.equals(product.getCreatedBy())) {
+                    throw new IllegalArgumentException(
+                            "All products must belong to the same farmer"
+                    );
+                }
+
+                BigDecimal price = product.getPrice();
+
+                if (price == null || price.signum() < 0) {
+                    throw new IllegalArgumentException(
+                            "Invalid product price"
+                    );
+                }
+
+                // Atomically reserve stock in Product Service
+                productServiceClient.reserveStock(
+                        product.getId(),
+                        itemRequest.getQuantity()
+                );
+
+                reservedItems.add(itemRequest);
+
+                BigDecimal subtotal = price.multiply(
+                        BigDecimal.valueOf(itemRequest.getQuantity())
+                );
+
+                OrderItem orderItem = new OrderItem();
+
+                orderItem.setOrder(order);
+                orderItem.setProductId(product.getId());
+                orderItem.setProductName(product.getName());
+                orderItem.setQuantity(itemRequest.getQuantity());
+                orderItem.setPrice(price);
+                orderItem.setSubtotal(subtotal);
+
+                orderItems.add(orderItem);
+
+                total = total.add(subtotal);
+            }
+
+            order.setSellerId(sellerId);
+            order.setTotalAmount(total);
+            order.setItems(orderItems);
+
+            Order savedOrder = orderRepository.save(order);
+
+            return mapToResponse(savedOrder);
+
+        } catch (RuntimeException exception) {
+
+            // Restore previously reserved stock
+            for (OrderItemRequestDTO item : reservedItems) {
+
+                try {
+                    productServiceClient.releaseStock(
+                            item.getProductId(),
+                            item.getQuantity()
                     );
 
-            if (product == null) {
-                throw new EntityNotFoundException(
-                        "Product not found: " + itemRequest.getProductId()
-                );
+                } catch (RuntimeException releaseException) {
+                    // Log this for manual reconciliation/retry.
+                    System.err.println(
+                            "CRITICAL: Stock release failed for product "
+                                    + item.getProductId()
+                    );
+                }
             }
 
-            if (product.getQuantity() == null ||
-                    product.getQuantity() < itemRequest.getQuantity()) {
-
-                throw new IllegalArgumentException(
-                        "Insufficient stock for " + product.getName()
-                );
-            }
-
-            if (product.getCreatedBy() == null ||
-                    !"FARMER".equals(product.getCreatedByRole())) {
-
-                throw new IllegalArgumentException(
-                        "This order currently supports farmer products only"
-                );
-            }
-
-            // All products in this order must belong to one seller.
-            if (sellerId == null) {
-                sellerId = product.getCreatedBy();
-            } else if (!sellerId.equals(product.getCreatedBy())) {
-                throw new IllegalArgumentException(
-                        "All products in one order must belong to the same seller"
-                );
-            }
-
-            BigDecimal price = product.getPrice();
-
-            if (price == null || price.signum() < 0) {
-                throw new IllegalArgumentException(
-                        "Invalid product price"
-                );
-            }
-
-            BigDecimal subtotal = price.multiply(
-                    BigDecimal.valueOf(itemRequest.getQuantity())
-            );
-
-            OrderItem orderItem = new OrderItem();
-
-            orderItem.setOrder(order);
-            orderItem.setProductId(product.getId());
-            orderItem.setProductName(product.getName());
-            orderItem.setQuantity(itemRequest.getQuantity());
-            orderItem.setPrice(price);
-            orderItem.setSubtotal(subtotal);
-
-            orderItems.add(orderItem);
-            total = total.add(subtotal);
+            throw exception;
         }
-
-        order.setSellerId(sellerId);
-        order.setTotalAmount(total);
-        order.setItems(orderItems);
-
-        Order savedOrder = orderRepository.save(order);
-
-        return mapToResponse(savedOrder);
     }
 
     @Transactional(readOnly = true)
