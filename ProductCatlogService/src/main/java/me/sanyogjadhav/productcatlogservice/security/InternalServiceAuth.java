@@ -14,7 +14,7 @@ public class InternalServiceAuth {
 
     public boolean isValid(String providedSecret) {
 
-        if (providedSecret == null) {
+        if (providedSecret == null || expectedSecret == null) {
             return false;
         }
 
