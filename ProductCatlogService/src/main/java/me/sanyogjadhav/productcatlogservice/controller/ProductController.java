@@ -8,11 +8,13 @@ import me.sanyogjadhav.productcatlogservice.dto.ProductRequestDTO;
 import me.sanyogjadhav.productcatlogservice.dto.ProductResponseDTO;
 
 import me.sanyogjadhav.productcatlogservice.security.AuthenticatedUser;
+import me.sanyogjadhav.productcatlogservice.security.InternalServiceAuth;
 import me.sanyogjadhav.productcatlogservice.service.ProductService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +27,7 @@ import java.util.List;
 public class ProductController {
 
     private final ProductService productService;
-
+    private final InternalServiceAuth internalServiceAuth;
     // Add Product
     @PostMapping
     public ResponseEntity<ProductResponseDTO> addProduct(
@@ -119,6 +121,40 @@ public class ProductController {
                 )
         );
 
+    }
+
+    @PostMapping("/{productId}/reserve-stock")
+    public ResponseEntity<Void> reserveStock(
+            @PathVariable Long productId,
+            @RequestParam Integer quantity,
+            @RequestHeader("X-Internal-Service-Key") String serviceKey
+    ) {
+        if (!internalServiceAuth.isValid(serviceKey)) {
+            throw new AccessDeniedException(
+                    "Invalid internal service credentials"
+            );
+        }
+
+        productService.reserveStock(productId, quantity);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{productId}/release-stock")
+    public ResponseEntity<Void> releaseStock(
+            @PathVariable Long productId,
+            @RequestParam Integer quantity,
+            @RequestHeader("X-Internal-Service-Key") String serviceKey
+    ) {
+        if (!internalServiceAuth.isValid(serviceKey)) {
+            throw new AccessDeniedException(
+                    "Invalid internal service credentials"
+            );
+        }
+
+        productService.releaseStock(productId, quantity);
+
+        return ResponseEntity.noContent().build();
     }
 
 

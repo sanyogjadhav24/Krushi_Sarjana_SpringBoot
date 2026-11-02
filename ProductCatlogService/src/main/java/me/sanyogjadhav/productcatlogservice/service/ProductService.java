@@ -146,6 +146,51 @@ public class ProductService {
     }
 
 
+    @Transactional
+    public void reserveStock(Long productId, Integer quantity) {
+
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException(
+                    "Quantity must be greater than zero"
+            );
+        }
+
+        int updatedRows = productRepository.reserveStock(
+                productId,
+                quantity
+        );
+
+        if (updatedRows == 0) {
+
+            if (!productRepository.existsById(productId)) {
+                throw new EntityNotFoundException("Product not found");
+            }
+
+            throw new IllegalArgumentException(
+                    "Insufficient stock available"
+            );
+        }
+    }
+
+    @Transactional
+    public void releaseStock(Long productId, Integer quantity) {
+
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException(
+                    "Quantity must be greater than zero"
+            );
+        }
+
+        int updatedRows = productRepository.releaseStock(
+                productId,
+                quantity
+        );
+
+        if (updatedRows == 0) {
+            throw new EntityNotFoundException("Product not found");
+        }
+    }
+
     //check ownerShip
 
     private void checkOwnership(Product product, Long userId, UserRole userRole) {
