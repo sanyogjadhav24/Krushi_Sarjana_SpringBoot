@@ -20,10 +20,12 @@ public class ProductServiceClient {
     @Value("${internal.service.secret}")
     private String internalServiceSecret;
 
-    public ProductResponseDTO getProduct(
-            Long productId,
-            String token
-    ) {
+    public ProductResponseDTO getProduct(Long productId, String token) {
+
+        String authorizationHeader = token.startsWith("Bearer ")
+                ? token
+                : "Bearer " + token;
+
         return restClientBuilder
                 .baseUrl(productServiceUrl)
                 .build()
@@ -31,7 +33,7 @@ public class ProductServiceClient {
                 .uri("/api/products/{id}", productId)
                 .header(
                         HttpHeaders.AUTHORIZATION,
-                        "Bearer " + token
+                        authorizationHeader
                 )
                 .retrieve()
                 .body(ProductResponseDTO.class);

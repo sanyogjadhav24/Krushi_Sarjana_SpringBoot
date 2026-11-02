@@ -9,6 +9,7 @@ import me.sanyogjadhav.orderservice.model.OrderStatus;
 import me.sanyogjadhav.orderservice.security.AuthenticatedUser;
 import me.sanyogjadhav.orderservice.service.OrderService;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,16 +27,12 @@ public class OrderController {
     // Customer creates an order
     @PostMapping
     public ResponseEntity<OrderResponseDTO> createOrder(
-            @Valid @RequestBody OrderRequestDTO request,
+            @RequestBody OrderRequestDTO request,
             @AuthenticationPrincipal AuthenticatedUser user,
-            @RequestHeader("Authorization") String authorization
-    ) {
-        String token = authorization.substring(7);
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
 
-        OrderResponseDTO response =
-                orderService.createOrder(request, user, token);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(orderService.createOrder(request, user, token));
     }
 
     // Customer views their orders
