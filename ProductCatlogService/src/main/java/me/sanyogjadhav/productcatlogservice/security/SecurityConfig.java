@@ -1,19 +1,13 @@
-
 package me.sanyogjadhav.productcatlogservice.security;
 
 import lombok.RequiredArgsConstructor;
 
-import me.sanyogjadhav.productcatlogservice.security.JwtAuthenticationFilter;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -28,21 +22,18 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
-                // Disable CSRF for stateless REST APIs
                 .csrf(csrf -> csrf.disable())
 
-                // Disable default authentication mechanisms
                 .formLogin(form -> form.disable())
+
                 .httpBasic(basic -> basic.disable())
 
-                // JWT authentication is stateless
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
                         )
                 )
 
-                // Handle authentication and authorization errors
                 .exceptionHandling(exception -> exception
 
                         .authenticationEntryPoint(
@@ -80,15 +71,20 @@ public class SecurityConfig {
                         )
                 )
 
-                // Secure all API endpoints
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers("/error").permitAll()
 
+                        // Internal service APIs
+                        .requestMatchers(
+                                "/api/products/*/reserve-stock",
+                                "/api/products/*/release-stock"
+                        ).permitAll()
+
+                        // All other APIs require JWT
                         .anyRequest().authenticated()
                 )
 
-                // Add JWT filter before UsernamePasswordAuthenticationFilter
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
