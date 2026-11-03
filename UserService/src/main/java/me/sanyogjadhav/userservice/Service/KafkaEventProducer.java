@@ -7,16 +7,18 @@ import org.springframework.stereotype.Service;
 @Service
 public class KafkaEventProducer {
 
-    private final KafkaTemplate<String, NotificationEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public KafkaEventProducer(
-            KafkaTemplate<String, NotificationEvent> kafkaTemplate) {
+            KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
     public void publish(String topic, NotificationEvent event) {
+
         kafkaTemplate.send(topic, event.eventId(), event)
                 .whenComplete((result, exception) -> {
+
                     if (exception != null) {
                         System.err.println(
                                 "Failed to publish Kafka event: "
