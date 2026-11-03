@@ -15,7 +15,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import me.sanyogjadhav.userservice.dto.NotificationEvent;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,35 +30,50 @@ public class AuthService {
     private final UserRepository userrepo;
     private final PasswordEncoder passwordEncoder;
     private final JWTService jwtService;
+    private final KafkaEventProducer kafkaEventProducer;
+
 
     @Autowired
-    AuthService(UserRepository userrepo, PasswordEncoder passwordEncoder, JWTService jwtService){
+    AuthService(UserRepository userrepo, PasswordEncoder passwordEncoder, JWTService jwtService, KafkaEventProducer kafkaEventProducer){
         this.userrepo=userrepo;
         this.passwordEncoder=passwordEncoder;
         this.jwtService=jwtService;
+        this.kafkaEventProducer=kafkaEventProducer;
     }
+
+
     @Transactional
     public UserResDTO register(UserReqDTO reqDTO) {
+
         String email = reqDTO.getEmail().trim().toLowerCase();
 
         boolean emailExists = userrepo.existsByEmail(email);
         boolean phoneExists = userrepo.existsByPhoneNo(reqDTO.getPhoneNo());
 
         if (emailExists && phoneExists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Both email and phone number are already registered.");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Both email and phone number are already registered."
+            );
         }
+
         if (emailExists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Email already registered. Please use another email.");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Email already registered. Please use another email."
+            );
         }
+
         if (phoneExists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Phone number already registered. Please use another phone number.");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Phone number already registered. Please use another phone number."
+            );
         }
 
-        Role role = reqDTO.getRole() == null ? Role.CUSTOMER : reqDTO.getRole();
-
+        Role role = reqDTO.getRole() == null
+                ? Role.CUSTOMER
+                : reqDTO.getRole();
 
         User user = new User();
         user.setName(reqDTO.getName());
@@ -65,10 +86,39 @@ public class AuthService {
         user.setDeleted(false);
 
         try {
-            return toResponseDto(userrepo.save(user));
+            User savedUser = userrepo.save(user);
+
+            NotificationEvent event = new NotificationEvent(
+                    UUID.randomUUID().toString(),
+                    "USER_REGISTERED",
+                    1,
+                    Instant.now(),
+                    "UserService",
+                    Map.of(
+                            "userId", savedUser.getUser_id(),
+                            "name", savedUser.getName(),
+                            "email", savedUser.getEmail(),
+                            "role", savedUser.getRole().name()
+                    )
+            );
+
+            // Publish only after the database transaction commits.
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            kafkaEventProducer.publish("user-events", event);
+                        }
+                    }
+            );
+
+            return toResponseDto(savedUser);
+
         } catch (DataIntegrityViolationException e) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Email or phone number already registered.");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Email or phone number already registered."
+            );
         }
     }
 
