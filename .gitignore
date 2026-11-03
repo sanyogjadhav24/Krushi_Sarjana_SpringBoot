@@ -1,48 +1,17 @@
 # Environment files
-
 .env
 .env.*
-**/.env
-**/.env.*
 !.env.example
 
-# Java compiled files
-*.class
-*.jar
-*.war
+# IntelliJ
+.idea/
+*.iml
 
 # Maven
 **/target/
 
 # Gradle
 **/build/
-.gradle/
-
-# IDE
-.idea/
-**/.idea/
-*.iml
-.classpath
-.project
-.settings/
-.vscode/
 
 # Logs
 *.log
-logs/
-
-**/.env
-**/.env.*
-
-# IntelliJ
-**/.idea/
-
-# Maven build
-**/target/
-
-# Compiled Java
-**/target/
-**/.idea/
-**/.env
-**/.env.*
-
