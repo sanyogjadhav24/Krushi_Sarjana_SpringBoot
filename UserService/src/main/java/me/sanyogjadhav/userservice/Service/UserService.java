@@ -1,4 +1,5 @@
 package me.sanyogjadhav.userservice.Service;
+import me.sanyogjadhav.userservice.dto.InternalUserResponseDTO;
 import me.sanyogjadhav.userservice.dto.UserReqDTO;
 import me.sanyogjadhav.userservice.dto.UserResDTO;
 import me.sanyogjadhav.userservice.model.User;
@@ -62,6 +63,18 @@ public class UserService {
         return userrepo.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found with id: " + id));
+    }
+
+    public InternalUserResponseDTO getInternalUserById(Long id) {
+
+        User user = findActiveUser(id);
+
+        return new InternalUserResponseDTO(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole()
+        );
     }
 
     private UserResDTO toResponseDto(User user) {

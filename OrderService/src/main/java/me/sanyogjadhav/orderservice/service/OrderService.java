@@ -1,7 +1,10 @@
 package me.sanyogjadhav.orderservice.service;
 
 import lombok.RequiredArgsConstructor;
+
 import me.sanyogjadhav.orderservice.client.ProductServiceClient;
+import me.sanyogjadhav.orderservice.client.UserServiceClient;
+
 import me.sanyogjadhav.orderservice.dto.*;
 import me.sanyogjadhav.orderservice.model.*;
 import me.sanyogjadhav.orderservice.repository.OrderRepository;
@@ -13,10 +16,14 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -25,6 +32,10 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final ProductServiceClient productServiceClient;
+    private final UserServiceClient userServiceClient;
+    private final KafkaEventProducer kafkaEventProducer;
+
+    private static final String ORDER_TOPIC = "order-events";
 
     @Transactional
     public OrderResponseDTO createOrder(
@@ -55,7 +66,6 @@ public class OrderService {
 
         List<OrderItem> orderItems = new ArrayList<>();
 
-        // Track successful reservations for compensation
         List<OrderItemRequestDTO> reservedItems = new ArrayList<>();
 
         try {
@@ -70,7 +80,8 @@ public class OrderService {
 
                 if (product == null) {
                     throw new EntityNotFoundException(
-                            "Product not found: " + itemRequest.getProductId()
+                            "Product not found: "
+                                    + itemRequest.getProductId()
                     );
                 }
 
@@ -84,6 +95,7 @@ public class OrderService {
 
                 if (sellerId == null) {
                     sellerId = product.getCreatedBy();
+
                 } else if (!sellerId.equals(product.getCreatedBy())) {
                     throw new IllegalArgumentException(
                             "All products must belong to the same farmer"
@@ -98,7 +110,6 @@ public class OrderService {
                     );
                 }
 
-                // Atomically reserve stock in Product Service
                 productServiceClient.reserveStock(
                         product.getId(),
                         itemRequest.getQuantity()
@@ -128,7 +139,39 @@ public class OrderService {
             order.setTotalAmount(total);
             order.setItems(orderItems);
 
+            // Retrieve seller details from UserService
+            InternalUserResponseDTO seller =
+                    userServiceClient.getUserById(sellerId);
+
+            if (seller == null || seller.email() == null
+                    || seller.email().isBlank()) {
+                throw new IllegalStateException(
+                        "Seller email could not be retrieved"
+                );
+            }
+
+            if (user.email() == null || user.email().isBlank()) {
+                throw new IllegalStateException(
+                        "Customer email is missing from JWT"
+                );
+            }
+
             Order savedOrder = orderRepository.save(order);
+
+            // Publish ORDER_PLACED after database commit
+            NotificationEvent event = createEvent(
+                    "ORDER_PLACED",
+                    Map.of(
+                            "orderId", savedOrder.getId(),
+                            "orderNumber", savedOrder.getOrderNumber(),
+                            "customerId", savedOrder.getCustomerId(),
+                            "customerEmail", user.email(),
+                            "sellerId", savedOrder.getSellerId(),
+                            "sellerEmail", seller.email()
+                    )
+            );
+
+            publishAfterCommit(event);
 
             return mapToResponse(savedOrder);
 
@@ -144,7 +187,7 @@ public class OrderService {
                     );
 
                 } catch (RuntimeException releaseException) {
-                    // Log this for manual reconciliation/retry.
+
                     System.err.println(
                             "CRITICAL: Stock release failed for product "
                                     + item.getProductId()
@@ -212,7 +255,11 @@ public class OrderService {
 
         order.setStatus(OrderStatus.CANCELLED);
 
-        return mapToResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+
+        publishOrderStatusEvent(savedOrder, "ORDER_CANCELLED");
+
+        return mapToResponse(savedOrder);
     }
 
     @Transactional
@@ -256,8 +303,111 @@ public class OrderService {
 
         order.setStatus(newStatus);
 
-        return mapToResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+
+        // Only publish event types supported by NotificationService
+        switch (newStatus) {
+
+            case CONFIRMED ->
+                    publishOrderStatusEvent(
+                            savedOrder, "ORDER_CONFIRMED"
+                    );
+
+            case SHIPPED ->
+                    publishOrderStatusEvent(
+                            savedOrder, "ORDER_SHIPPED"
+                    );
+
+            case DELIVERED ->
+                    publishOrderStatusEvent(
+                            savedOrder, "ORDER_DELIVERED"
+                    );
+
+            case CANCELLED ->
+                    publishOrderStatusEvent(
+                            savedOrder, "ORDER_CANCELLED"
+                    );
+
+            default -> {
+                // PROCESSING is not currently supported by NotificationService
+            }
+        }
+
+        return mapToResponse(savedOrder);
     }
+
+    // ==========================================
+    // PUBLISH ORDER STATUS EVENT
+    // ==========================================
+
+    private void publishOrderStatusEvent(
+            Order order,
+            String eventType
+    ) {
+
+        InternalUserResponseDTO customer =
+                userServiceClient.getUserById(order.getCustomerId());
+
+        if (customer == null || customer.email() == null
+                || customer.email().isBlank()) {
+            throw new IllegalStateException(
+                    "Customer email could not be retrieved"
+            );
+        }
+
+        NotificationEvent event = createEvent(
+                eventType,
+                Map.of(
+                        "orderId", order.getId(),
+                        "orderNumber", order.getOrderNumber(),
+                        "customerId", order.getCustomerId(),
+                        "customerEmail", customer.email()
+                )
+        );
+
+        publishAfterCommit(event);
+    }
+
+    // ==========================================
+    // CREATE NOTIFICATION EVENT
+    // ==========================================
+
+    private NotificationEvent createEvent(
+            String eventType,
+            Map<String, Object> data
+    ) {
+
+        return new NotificationEvent(
+                UUID.randomUUID().toString(),
+                eventType,
+                1,
+                Instant.now(),
+                "OrderService",
+                data
+        );
+    }
+
+    // ==========================================
+    // PUBLISH ONLY AFTER DB COMMIT
+    // ==========================================
+
+    private void publishAfterCommit(NotificationEvent event) {
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+
+                    @Override
+                    public void afterCommit() {
+
+                        kafkaEventProducer.publish(
+                                ORDER_TOPIC,
+                                event
+                        );
+                    }
+                }
+        );
+    }
+
 
     private void checkOrderAccess(
             Order order,
@@ -294,6 +444,7 @@ public class OrderService {
         List<OrderItemResponseDTO> items = order.getItems()
                 .stream()
                 .map(item -> {
+
                     OrderItemResponseDTO dto =
                             new OrderItemResponseDTO();
 
