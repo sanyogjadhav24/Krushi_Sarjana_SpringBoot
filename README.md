@@ -560,7 +560,7 @@ sudo apt install certbot python3-certbot-nginx -y
 Generate the SSL certificate:
 
 ```bash
-sudo certbot --nginx -d YOUR_DOMAIN
+sudo certbot --nginx -d krushisarjana.duckdns.org
 ```
 
 Test automatic renewal:
@@ -586,13 +586,13 @@ sudo systemctl status nginx
 Test the public gateway:
 
 ```bash
-curl -I https://YOUR_DOMAIN
+curl -I https://krushisarjana.duckdns.org
 ```
 
 Test a backend API:
 
 ```bash
-curl -i https://YOUR_DOMAIN/api/products
+curl -i https://krushisarjana.duckdns.org/api/products
 ```
 
 Protected APIs should be tested with a valid JWT token.
